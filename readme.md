@@ -27,6 +27,12 @@ You can replace **icon.ico** with your own icon, or if you don't want to use an 
 
 ## Compile the executable:
 
+* Using Mesos (on Windows wit Power Shell Core)
+
+```
+.\init-project.ps1
+```
+
 * On Windows, using Mingw-w64
 
     Install MSYS2 tools from https://www.msys2.org/, open the MinGW 64-bit terminal and run
