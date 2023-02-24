@@ -1,6 +1,9 @@
 [requires]
 spdlog/1.11.0
 
+[options]
+spdlog/1.11.0:wchar_support=True
+
 [generators]
 PkgConfigDeps
 MesonToolchain

@@ -3,39 +3,61 @@
 
 #include <iostream>
 #include <filesystem>
+#include <vector>
 
-#include <windows.h>
-#include <stdio.h>
-#include <shlwapi.h>
 
 #define BUFSIZE 512
 wchar_t buf[BUFSIZE];
 
 
-void print(std::wstring string) {
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+    #include <unistd.h>
+
+    #define POSIX_VERSION _POSIX_VERSION
+    #define character_t char_t
+    #define string_t std::string
+#else
+    #include <windows.h>
+    #include <stdio.h>
+    #include <shlwapi.h>
+    #include <comdef.h>
+
+    #define POSIX_VERSION 0
+    #define character_t wchar_t
+    #define string_t std::wstring
+#endif
+
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
+
+
+
+void print(string_t string) {
     std::wcout << string << std::endl;
 }
 
-void print(wchar_t array[]) {
-    std::wstring string{array};
-    std::wcout << string << std::endl;
+void print(character_t array[]) {
+    auto string = string_t{array};
+    spdlog::trace(array);
+    spdlog::trace(string);
 }
 
 void goToExeDirectory() {
     // create path array with windows MAX_PATH size
-    wchar_t path[MAX_PATH];
+    character_t path[MAX_PATH];
     // populate path with this exe path and returns path array populated size
     int len = GetModuleFileNameW(NULL, path, MAX_PATH);
     print(path);
     if (len > 0 && len < MAX_PATH) {
-        std::wstring pathStr{path};
-        std::wstring subpath = pathStr.substr(0, pathStr.find_last_of('\\'));
-        SetCurrentDirectoryW(subpath.c_str());
+        string_t pathStr{path};
+        string_t subpath = pathStr.substr(0, pathStr.find_last_of('\\'));
+        std::filesystem::current_path(subpath.c_str());
     }
 }
 
-std::wstring cwd() {
-    std::wstring cwd = std::filesystem::current_path();
+string_t cwd() {
+    string_t cwd = std::filesystem::current_path();
     print(cwd);
     return cwd;
 }
@@ -46,9 +68,24 @@ void assureExeDirectory() {
     cwd();
 }
 
-int main() {
+int main(int argc, char* argv[], char* envp[]) {
+    auto console = spdlog::stdout_color_mt("console");
+    spdlog::set_default_logger(console);
+    spdlog::set_level(spdlog::level::trace);
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S] [%n] [%^%l%$] [%s#%!:%#] [%P(%t)] - %v");
+
+    SPDLOG_INFO("loggers can be retrieved from a global registry using the spdlog::get(logger_name)");
+    SPDLOG_INFO("argc: {}", argc);
+    for(int i = 0; i < argc; i++) {
+        SPDLOG_TRACE("argv[{}]: {}", i, argv[i]);
+    }
+    for(size_t i = 0; envp[i] != NULL; i++) {
+        SPDLOG_TRACE("envp[{}]: {}", i, envp[i]);
+    }
+
+    SPDLOG_WARN("HERE");
     assureExeDirectory();
-    /*STARTUPINFOW si;
+    STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
@@ -75,7 +112,7 @@ int main() {
     }
 
     CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);*/
+    CloseHandle(pi.hThread);
     // FIXME return exit code from java
-    return 0;
+    return exitCode;
 }
